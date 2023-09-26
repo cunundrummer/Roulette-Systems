@@ -1,15 +1,14 @@
 import pandas as pd
-import os.path
 from datetime import datetime
 
 
-def create_filename(filename, f_extension='.csv'):
+def create_filename(filename, f_extension='.csv') -> str:
     """
     Creates the file with the filename provided.  To ensure uniqueness, it will append the date and time at the end.
     The default extension will be csv for easy integration with spreadsheets/dbases/etc...
     :param filename:
     :param f_extension:
-    :return:
+    :return: str - A formatted 'raw' string
     """
     file = f'{filename + (str(datetime.now()).strip())}{f_extension}'
     print(f'Creating file: , {file}')

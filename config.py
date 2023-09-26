@@ -7,8 +7,8 @@ GAMES = 100
 STOP_AFTER_WINNING_AMOUNT = 500
 WIN = 'w'
 LOSS = 'l'
-# Game system config
-DESCRIBE_STRAT = False
+
+DESCRIBE_STRAT = False  # intention: before running the strategy, describe it?
 
 BLACKS = [15, 4, 2, 17, 6, 13, 11, 8, 10, 24, 33, 20, 31, 22, 29, 28, 35, 26]
 REDS = [32, 19, 21, 25, 34, 27, 36, 30, 23, 5, 16, 1, 14, 9, 18, 7, 12, 3]
@@ -21,7 +21,3 @@ DOZENS3 = list(range(25, 37))
 
 DOZENS_MP = 2
 COLUMNS_MP = 2
-
-
-def set_max_bet(m_bet=DEFAULT_MAX_BET_OUTSIDES) -> int:
-    return m_bet

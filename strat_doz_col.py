@@ -11,7 +11,11 @@ UNIT = 10
 ORIGINAL_BANKROLL = 2000
 
 
-def describe():
+def describe() -> None:
+    """
+    A detailed step by step description of the system.
+    :return:
+    """
     print(f'Strategy name: \n  {STRAT_NAME}')
     print(f'Start with original bankroll: \n  {ORIGINAL_BANKROLL}')
     print(f'Will always continue with orig. bankroll or start with cumulative bankroll? \n ',
@@ -30,28 +34,6 @@ def describe():
     print(f'  the max number of rounds ({config.ROUNDS_MAX} have been iterated through...')
     print(f'  cannot make a bet because of lack of bankroll funds.')
     print('\n ----------------------------------------------------------------------------------------------------- \n')
-
-
-def is_total_loss(bps: int, max_bet: int,  *argv) -> dict[str, bool | str]:
-    """
-    Determines the conditions of a total loss
-
-    :param bps: bankroll per session
-    :param max_bet: maximum allowable bet
-    :param argv: bets values
-    :return: bool
-    """
-    bets_total = sum(argv, 0)
-
-    # condition1: if session bankroll <= 0
-    if (bps - bets_total) <= 0:
-        return {"result": True, "reason": 'Not enough funds to continue'}
-
-    # condition2: if bets_total > MAX_BET
-    if bets_total > max_bet:
-        return {"result": True, "reason": 'Bet exceeds the maximum allowable bet'}
-
-    return {"result": False, "reason": ''}
 
 
 def record_total_loss(gc, bps: int, bankroll: int, last_round: int, wl: str) -> dict:
@@ -147,7 +129,7 @@ def strat_dozs_and_cols(games_count: int, bankroll: int) -> dict:
             bet_doz = bet_doz + UNIT
 
         # on lose session:
-        if is_total_loss(bankroll_per_session, MAX_BET, bet_col, bet_doz).get('result'):
+        if game_utils.is_total_loss(bankroll_per_session, MAX_BET, bet_col, bet_doz).get('result'):
             print(f'TOTAL LOSS on round {rounds}')
             print('-- recording result for loss...')
             results.update(

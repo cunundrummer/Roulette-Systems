@@ -4,17 +4,6 @@ from config import *
 from strat_doz_col import *
 
 
-def calculate_winnings(bet: int, mp: int, include_initial_bet: bool = True) -> int:
-    """ Calculates the winnings.  Optionally include the original bet. Ex.  if winning on a 2:1 multiplier,
-    you can return simply that.  But the real amount usually includes the initial bet, so it would more likely be a
-    3:1 bet.
-    """
-
-    if include_initial_bet:
-        return (bet * mp) + bet  # adjusted 3:1
-    return bet * mp  # orig 2:1
-
-
 if __name__ == '__main__':
     games_max = GAMES
     games_count = 0

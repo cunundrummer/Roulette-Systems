@@ -1,0 +1,3 @@
+game,bankroll_at_start,num_rounds,win_lose,amount
+1,2000,45,w,2500
+2,2500,120,l,450
