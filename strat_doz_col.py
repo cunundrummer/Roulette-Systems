@@ -1,12 +1,12 @@
 import config
 import game_utils
-from config import set_max_bet, COLUMN2, DOZENS2, COLUMNS_MP
+from config import COLUMN2, DOZENS2, COLUMNS_MP
 from file_utils import record_result_to_dict
 import random
 
 STRAT_NAME = 'Dozen and column'
 ROUNDS_MAX = 500
-MAX_BET = set_max_bet(2000)  # Max bet for outsides is usually different from inside max bets
+MAX_BET = game_utils.set_max_bet(2000)  # Max bet for outsides is usually different from inside max bets
 UNIT = 10
 ORIGINAL_BANKROLL = 2000
 

@@ -1,5 +1,5 @@
 start_with_last_bankroll: bool = True
-save_to_csv: bool = True
+save_to_csv: bool = False
 
 DEFAULT_MAX_BET_OUTSIDES = 2000
 ROUNDS_MAX = 500
@@ -21,3 +21,13 @@ DOZENS3 = list(range(25, 37))
 
 DOZENS_MP = 2
 COLUMNS_MP = 2
+
+DOZENS1_ID = 40
+DOZENS2_ID = 41
+DOZENS3_ID = 42
+
+DOZENS1_dict = {'id': DOZENS1_ID, 'numbers': DOZENS1, 'readable': '1st 12'}
+DOZENS2_dict = {'id': DOZENS2_ID, 'numbers': DOZENS2, 'readable': '2nd 12'}
+DOZENS3_dict = {'id': DOZENS3_ID, 'numbers': DOZENS3, 'readable': '3rd 12'}
+
+LOCATIONS_OBJ = [DOZENS1_dict, DOZENS2_dict, DOZENS3_dict]
