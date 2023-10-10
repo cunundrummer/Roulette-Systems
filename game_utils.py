@@ -48,18 +48,20 @@ def set_max_bet(m_bet=config.DEFAULT_MAX_BET_OUTSIDES) -> int:
     return m_bet
 
 
-def is_total_loss(bps: int, max_bet: int,  *argv) -> dict[str, bool | str]:
+def is_total_loss(bps: int, max_bet: int, *argv) -> dict[str, bool | str]:
     """
     Determines the conditions of a total loss
+    ex:
+        Not enough funds to continue
 
+        Bet exceeds the maximum allowable bet
     :rtype: object
     :param bps: bankroll per session
     :param max_bet: maximum allowable bet
-    :param argv: bets values
+    :param argv:
     :return: dict["result": bool, "reason": str | None]
     """
-
-    total = sum(argv, 0)
+    total = sum(*argv)
 
     # condition1: if session bankroll <= 0
     if (bps - total) <= 0:
@@ -69,7 +71,7 @@ def is_total_loss(bps: int, max_bet: int,  *argv) -> dict[str, bool | str]:
     if total > max_bet:
         return {"result": True, "reason": 'Bet exceeds the maximum allowable bet'}
 
-    return {"result": False, "reason": ''}
+    return {"result": False, "reason": 'Not a total loss.'}
 
 
 def calc_percentage(br, percentage_required) -> int:

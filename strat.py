@@ -1,12 +1,13 @@
 import config
 import game_utils
-from custom_types import Bet_data
+from file_utils import record_result_to_dict
 
 reset_at_profit_of = 150  # Found state machine library.  In the meantime, continue with simple states
 bankroll_required = 2000  # buy in
 cashout = game_utils.calc_percentage(bankroll_required, 15)
 ORIG_UNIT_AMOUNT = 10
-
+MAX_BET = game_utils.set_max_bet(2000)  # Max bet for outsides is usually different from inside max bets
+filename = 'Holy Grail v1'
 
 # holy grail (advantage play)
 # bets on the 1st and 2nd dozen
@@ -38,7 +39,7 @@ def strat_(games_count: int = None, bankroll: int = None):
     # Calculate the stop limit by adding the winning amount and bankroll
     stop_limit_by_amount = config.STOP_AFTER_WINNING_AMOUNT + bankroll  # +300
     print('\n-------- New Game Started -------- : ', gc)
-
+    print('Will cashout @ ', cashout)
     rounds = 0
     bankroll_per_session = bankroll  # the running total bankroll
     reset_at = bankroll + reset_at_profit_of
@@ -56,7 +57,7 @@ def strat_(games_count: int = None, bankroll: int = None):
         bets_locations.append(game_utils.place_bet(units, config.DOZENS2_ID))
 
         total_bets = game_utils.bets_total(bets_locations)
-        bankroll_per_session = bankroll_per_session - total_bets  # bet_doz_1 - bet_doz_2
+        bankroll_per_session = bankroll_per_session - total_bets
         print(f'After bet({total_bets}), bankroll: {bankroll_per_session}')
 
         # get number
@@ -82,5 +83,40 @@ def strat_(games_count: int = None, bankroll: int = None):
                 print('Lose')
                 units += ORIG_UNIT_AMOUNT  # on every loss increase a unit (per system)
 
-        game_utils.generate_win_loss_report(0, rounds, num, bets_locations)
-        rounds = config.ROUNDS_MAX
+        game_utils.generate_win_loss_report(games_count, rounds, num, bets_locations)
+
+        # if total loss: record
+        if game_utils.is_total_loss(
+                bankroll_per_session, MAX_BET,
+                tuple(element['bet'] for element in bets_locations)).get('result'):
+            print('TOTAL LOSS')
+            print('-- recording result for loss...')
+            results.update(
+                record_result_to_dict(game_id=gc, bankroll_start=bankroll, round_ended_at=rounds,
+                                      result_wl="l", amount=bankroll_per_session)
+            )
+            rounds = config.ROUNDS_MAX  # end session because of loss limit reach
+
+        # if win cond1: reached limit in $ or reached stop limit by level: record
+        elif ((rounds >= config.ROUNDS_MAX and bankroll_per_session >= 0) or
+                bankroll_per_session >= stop_limit_by_amount):
+            print('-- recording result for win...')
+            results.update(
+                record_result_to_dict(game_id=gc, bankroll_start=bankroll, round_ended_at=rounds,
+                                      result_wl="w", amount=bankroll_per_session)
+            )
+            rounds = config.ROUNDS_MAX  # end session because of win limit reached
+            print('Exiting if condition for win')
+        else:
+            print('-- recording result for neither win or loss...')
+            results.update(
+                record_result_to_dict(game_id=gc, bankroll_start=bankroll, round_ended_at=rounds,
+                                      result_wl=config.LOSS if bankroll_per_session < bankroll else config.WIN,
+                                      amount=bankroll_per_session)
+            )
+            rounds += 1  # config.ROUNDS_MAX
+
+        bets_locations.clear()
+
+    print('Results from strat_.py', results)
+    return results
