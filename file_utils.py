@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 from datetime import datetime
 
 
@@ -29,3 +30,11 @@ def record_result_to_dict(game_id: int, bankroll_start: int, round_ended_at: int
                  "win_lose": result_wl,
                  "amount": amount
                  })
+
+
+def get_cur_filename() -> str:
+    """
+    Get the current scripts' filename.  Used mostly for debugging.
+    :return:
+    """
+    return os.path.basename(__file__)

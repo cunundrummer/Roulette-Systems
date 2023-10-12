@@ -1,4 +1,5 @@
 import config
+import file_utils
 import game_utils
 from file_utils import record_result_to_dict
 
@@ -7,13 +8,16 @@ bankroll_required = 2000  # buy in
 cashout = game_utils.calc_percentage(bankroll_required, 15)
 ORIG_UNIT_AMOUNT = 10
 MAX_BET = game_utils.set_max_bet(2000)  # Max bet for outsides is usually different from inside max bets
-filename = 'Holy Grail v1'
 
 # holy grail (advantage play)
 # bets on the 1st and 2nd dozen
 # lose: +1 unit
 # win: same unit on each bet
 # everytime reach 150, reset to single 10 unit
+
+
+def describe():
+    print('Not implemented.')
 
 
 def get_reset_levels(current_bankroll: int, old_reset_level_amount: int) -> int:
@@ -33,7 +37,7 @@ def get_reset_levels(current_bankroll: int, old_reset_level_amount: int) -> int:
     return old_reset_level_amount
 
 
-def strat_(games_count: int = None, bankroll: int = None):
+def holy_grail_v1(games_count: int = None, bankroll: int = None):
     gc = game_utils.readable_game_count(games_count)
 
     # Calculate the stop limit by adding the winning amount and bankroll
@@ -118,5 +122,5 @@ def strat_(games_count: int = None, bankroll: int = None):
 
         bets_locations.clear()
 
-    print('Results from strat_.py', results)
+    print(f'Results from {file_utils.get_cur_filename()}:\n', results)
     return results
