@@ -1,0 +1,15 @@
+body {
+  font-family: sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  display: inline;
+}
+
+input[type="text"] {
+  max-width: fit-content;
+}
+
+input[type="number"] {
+  max-width: fit-content;
+}

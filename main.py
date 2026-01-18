@@ -2,7 +2,7 @@ import file_utils
 import config
 from system_names import strat_holy_grail_v1
 
-system = strat_holy_grail_v1  # choose a system from system names to play out.
+system = strat_holy_grail_v1  # choose a system from system names to play out. Should be pulled from options.
 
 if __name__ == '__main__':
     games_max = config.GAMES  # max games to simulate

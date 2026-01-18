@@ -2,3 +2,6 @@
 *.pyc
 .DS_Store
 *.pyc
+__pycache__/config.cpython-311.pyc
+__pycache__/file_utils.cpython-311.pyc
+__pycache__/game_utils.cpython-311.pyc

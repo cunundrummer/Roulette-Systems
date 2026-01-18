@@ -1,0 +1,585 @@
+##### config.py #####
+# This file should contain all configurable variable
+
+start_with_last_bankroll: bool = True
+save_to_csv: bool = False
+
+DEFAULT_MAX_BET_OUTSIDES = 2000
+ROUNDS_MAX = 500
+GAMES = 100
+STOP_AFTER_WINNING_AMOUNT = 500
+STOP_AFTER_WINNING_PERCENTAGE = 30 # not implemented but could be used as an option - might be system dependant
+WIN = 'w'
+LOSS = 'l'
+
+DESCRIBE_STRAT = False  # intention: before running the strategy, describe it
+TABLE_TYPE = ['European', 'American']  # not used, but should be a placeholder to determine if the table uses 0, 00, 000
+
+# Values
+BLACKS = [15, 4, 2, 17, 6, 13, 11, 8, 10, 24, 33, 20, 31, 22, 29, 28, 35, 26]
+REDS = [32, 19, 21, 25, 34, 27, 36, 30, 23, 5, 16, 1, 14, 9, 18, 7, 12, 3]
+COLUMN1 = [1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34]
+COLUMN2 = [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35]
+COLUMN3 = [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36]
+DOZENS1 = list(range(1, 13))
+DOZENS2 = list(range(13, 25))
+DOZENS3 = list(range(25, 37))
+
+# Multipliers
+DOZENS_MP = 2 
+COLUMNS_MP = 2
+
+DOZENS1_ID = 40
+DOZENS2_ID = 41
+DOZENS3_ID = 42
+
+DOZENS1_dict = {'id': DOZENS1_ID, 'numbers': DOZENS1, 'readable': '1st 12'}
+DOZENS2_dict = {'id': DOZENS2_ID, 'numbers': DOZENS2, 'readable': '2nd 12'}
+DOZENS3_dict = {'id': DOZENS3_ID, 'numbers': DOZENS3, 'readable': '3rd 12'}
+
+LOCATIONS_OBJ = [DOZENS1_dict, DOZENS2_dict, DOZENS3_dict]
+###########################################################################
+
+
+##### custom_types.py #####
+# This file holds the custom types.  
+from typing import TypedDict
+
+Bet_data = TypedDict('Bet_data', {'bet': int, 'location': int})
+###########################################################################
+
+
+##### file_utils.py #####
+# This file handles anything to do with files
+import pandas as pd
+import os
+from datetime import datetime
+
+
+def create_filename(filename, f_extension='.csv') -> str:
+    """
+    Creates the file with the filename provided.  To ensure uniqueness, it will append the date and time at the end.
+    The default extension will be csv for easy integration with spreadsheets/dbases/etc...
+    :param filename:
+    :param f_extension:
+    :return: str - A formatted 'raw' string
+    """
+    file = f'{filename + (str(datetime.now()).strip())}{f_extension}'
+    print(f'Creating file: , {file}')
+    return fr'{file}'
+
+
+def save_to_csv(summary: list[dict], filename: str) -> None:
+    print('Saving to .csv...')
+    df = pd.DataFrame.from_records(summary)
+    file = create_filename(filename)
+    df.to_csv(file, index=False, header=True)
+
+
+def record_result_to_dict(game_id: int, bankroll_start: int, round_ended_at: int, result_wl: str, amount: int) -> dict:
+    return dict({'game': game_id,
+                 'bankroll_at_start': bankroll_start,
+                 'num_rounds': round_ended_at,
+                 "win_lose": result_wl,
+                 "amount": amount
+                 })
+
+
+def get_cur_filename() -> str:
+    """
+    Get the current scripts' filename.  Used mostly for debugging.
+    :return:
+    """
+    return os.path.basename(__file__)
+
+###########################################################################
+
+
+##### game_utils.py #####
+# This file provides the functions to play out the game along with some utility functions
+import random
+import config
+from custom_types import Bet_data
+
+
+def readable_game_count(gc: int) -> int:
+    return gc + 1
+
+
+def get_stop_limit(br) -> int:
+    """
+
+    :param br: bankroll
+    :return:
+    """
+    return br + config.STOP_AFTER_WINNING_AMOUNT
+
+
+def generate_number(start_at, range_end):
+    return random.randint(start_at, range_end)
+
+
+def place_bet(how_much: int, where: int) -> Bet_data:
+    return {'bet': how_much, 'location': where}
+
+
+def bets_total(bets: list[Bet_data]) -> int:
+    """
+    calculate specifically the total of bets for the list of bets(bet_data)
+    :param bets:
+    :return:
+    """
+    return sum([d.get('bet') for d in bets])
+
+
+def calc_winnings(bet: int, mp: int, include_initial_bet: bool = True) -> int:
+    """ Calculates the winnings.  Optionally include the original bet. Ex.  if winning on a 2:1 multiplier,
+    you can return simply that.  But the real amount usually includes the initial bet, so it would more likely be a
+    3:1 bet.
+    """
+
+    if include_initial_bet:
+        return (bet * mp) + bet  # adjusted 3:1
+    return bet * mp  # orig 2:1
+
+
+def set_max_bet(m_bet=config.DEFAULT_MAX_BET_OUTSIDES) -> int:
+    return m_bet
+
+
+def is_total_loss(bps: int, max_bet: int, *argv) -> dict[str, bool | str]:
+    """
+    Determines the conditions of a total loss
+    ex:
+        Not enough funds to continue
+
+        Bet exceeds the maximum allowable bet
+    :rtype: object
+    :param bps: bankroll per session
+    :param max_bet: maximum allowable bet
+    :param argv:
+    :return: dict["result": bool, "reason": str | None]
+    """
+    total = sum(*argv)
+
+    # condition1: if session bankroll <= 0
+    if (bps - total) <= 0:
+        return {"result": True, "reason": 'Not enough funds to continue'}
+
+    # condition2: if total > MAX_BET
+    if total > max_bet:
+        return {"result": True, "reason": 'Bet exceeds the maximum allowable bet'}
+
+    return {"result": False, "reason": 'Not a total loss.'}
+
+
+def calc_percentage(br, percentage_required) -> int:
+    return (percentage_required / 100) * br
+
+
+def get_readable_location(where: int) -> str | None:
+    for el in config.LOCATIONS_OBJ:
+        if el.get('id') == where:
+            return el.get('readable')
+    return None
+
+
+def is_number_exist_in_location_by_id(num: int, location: int) -> bool:
+    """
+    :param num: Spun num.
+    :param location: int -> the location id of the table area.
+    :return: bool
+    """
+    for el in config.LOCATIONS_OBJ:
+        if num in el.get('numbers') and location == el.get('id'):
+            return True
+    return False
+
+
+def generate_win_loss_report(game_num: int, round_num: int, spun_num: int, bet_locations_w_bets: list[Bet_data]):
+    """
+
+    :param game_num:
+    :param round_num:
+    :param spun_num:
+    :param bet_locations_w_bets: list[dict[int, int]]
+    :deprecated bets: All the bets. Can be different amounts depending on the strategy being used.
+    :return:
+    """
+    print('*************************************************')
+    print(f'Game: {game_num} :: Round: {round_num} :: Number: {spun_num}')
+
+    print('Bets:')
+    for bet in bet_locations_w_bets:
+        bet_amount = bet.get("bet")
+        readable_location = get_readable_location(bet.get("location"))
+        win_loss_result = 'W' if is_number_exist_in_location_by_id(spun_num, bet.get("location")) else 'L'
+        print(f'  ${str(bet_amount)} @ {readable_location}: {win_loss_result}')
+    print('*************************************************')
+###########################################################################
+
+
+##### system_names.py #####
+# this file should hold the strategies data.  Should be used in combination with the config.   
+from holy_grail_v1 import holy_grail_v1 as holy_grail_1
+from strat_doz_col import strat_dozs_and_cols
+
+# 1. precede all strategies with strat_
+# 2. use a dictionary containing information about a roulette strategy.
+#
+#    Attributes:
+#        name (str): The name of the strategy.  Will be used to create a .csv file after the game is played
+#        fn (callable): The function that implements the strategy.
+#        filename (str): The name of the file where the strategy is stored. ex. strat_doz_col.py
+#        description (str): A brief description of the strategy.
+
+
+strat_dozens_and_columns = {"name": 'roulette_results_cols_and_doz',
+                            "fn": strat_dozs_and_cols,
+                            'filename': 'dozs_and_cols',
+                            'description': ''
+                            }
+strat_holy_grail_v1 = {"name": 'Holy_Grail_v1',
+                       "fn": holy_grail_1,
+                       'filename': 'holy_grail_v1',
+                       'description': ''
+                       }
+
+###########################################################################
+
+##### strat_doz_col.py #####
+# Dozens and columns strategy
+import config
+import game_utils
+from config import COLUMN2, DOZENS2, COLUMNS_MP
+from file_utils import record_result_to_dict
+import random
+
+STRAT_NAME = 'Dozen and column'
+ROUNDS_MAX = 500
+MAX_BET = game_utils.set_max_bet(2000)  # Max bet for outsides is usually different from inside max bets
+UNIT = 10
+ORIGINAL_BANKROLL = 2000
+
+
+def describe() -> None:
+    """
+    A detailed step by step description of the system.
+    :return:
+    """
+    print(f'Strategy name: \n  {STRAT_NAME}')
+    print(f'Start with original bankroll: \n  {ORIGINAL_BANKROLL}')
+    print(f'Will always continue with orig. bankroll or start with cumulative bankroll? \n ',
+          'Original' if not config.start_with_last_bankroll else 'Cumulative (continuous)')
+    print('Always keeps track of session high(S.H.) | (all time high (A.T.H.).  The S.H. '
+          f'starts with the beginning bankroll (ex. 2000).')
+    print(f'Always start with 1 unit({UNIT}) on a dozen, and 1 unit({UNIT}) on a column.')
+    print(f'On loss: \n  increment a unit({UNIT}) or until broke.')
+    print('On win:')
+    print(f'  if winning and amount is >= A.T.H., reset bet back to 1 unit({UNIT}) on the respective dozen, column')
+    print(f'  if the bankroll < S.H, the bet remains unchanged. '
+          f'Ex. S.H = $2000, current bankroll = $1990, current bet = $30/area; the bet will remain $30/area.')
+    print(f'The game will continue until either:')
+    print(f'  {game_utils.get_stop_limit(ORIGINAL_BANKROLL)}(the bankroll + {config.STOP_AFTER_WINNING_AMOUNT}) '
+          f'is reached (stop limit)...')
+    print(f'  the max number of rounds ({config.ROUNDS_MAX} have been iterated through...')
+    print(f'  cannot make a bet because of lack of bankroll funds.')
+    print('\n ----------------------------------------------------------------------------------------------------- \n')
+
+
+def record_total_loss(gc, bps: int, bankroll: int, last_round: int, wl: str) -> dict:
+    """
+    at the moment, this function is called 'handle'_total_loss.  It may be changed to record_total_loss
+    :param gc: game count
+    :param bps: bankroll per session
+    :param bankroll: starting bankroll
+    :param last_round: the last round played at end
+    :param wl: win ('w') or loss ('l)
+    :return: dict
+    """
+    print(f'TOTAL LOSS on round {last_round}')
+    print('-- recording result for loss...')
+    return record_result_to_dict(game_id=gc, bankroll_start=bankroll, round_ended_at=last_round,
+                                 result_wl=wl, amount=bps)
+
+
+def strat_dozs_and_cols(games_count: int, bankroll: int) -> dict:
+    """
+
+    :param games_count:
+    :param bankroll:
+    :return:
+    """
+    gc = game_utils.readable_game_count(games_count)
+    stop_limit_by_amount = config.STOP_AFTER_WINNING_AMOUNT + bankroll  # +300
+    print('\n-------- New Game Started -------- : ', gc)
+
+    nums = list()  # will keep for history
+    rounds = 0
+    bankroll_per_session = bankroll  # the running total bankroll
+    bet_col = 10
+    bet_doz = 10
+    ath = 2000
+
+    results: dict = {}  # prepare new results
+
+    while rounds < ROUNDS_MAX and bankroll_per_session <= stop_limit_by_amount:
+        print(f'GAME: {gc} :: Round: {rounds + 1}')
+
+        # make the bet before getting the 'number'
+        print('Making bet before spinning for number...')
+        print(f'Betting {bet_doz} on doz2, {bet_col} on col2')
+        print(f'Bankroll: {bankroll_per_session} - {bet_col} - {bet_doz}: ')
+
+        bankroll_per_session = bankroll_per_session - bet_col - bet_doz
+
+        print(f'        = {bankroll_per_session}')
+
+        num = random.randint(0, 36)
+        nums.append(num)
+        print(f'Number: {num}')
+
+        winnings = 0
+        losses = 0
+
+        if num in COLUMN2:
+            print('winner col2')
+            winnings = winnings + (bet_col * COLUMNS_MP) + bet_col
+            print(f'+{winnings}: {bet_col} * {COLUMNS_MP} [+ {bet_col}]')
+        else:
+            losses = losses + 1
+            print(f'Lost {bet_col} on columns2')
+
+        if num in DOZENS2:
+            print('winner doz2')
+            winnings = winnings + (bet_doz * COLUMNS_MP) + bet_doz
+            print(f'+{winnings}: {bet_doz} * {COLUMNS_MP} [+ {bet_doz}]')
+        else:
+            losses = losses + 1
+            print(f'Lost {bet_doz} on dozens2')
+
+        bankroll_per_session = bankroll_per_session + winnings
+
+        print(f'Losses total: {losses}')
+        print(f'Bankroll: {bankroll_per_session}')
+
+        if bankroll_per_session > ath:
+            ath = bankroll_per_session
+            print(f'New ATH: {ath}')
+
+        # determine bet reset
+        if winnings > 0:
+            losses = 0  # no need to increment bets unit
+            if bankroll_per_session >= ath:
+                print(f'RESETTING BETS to {UNIT}')
+                bet_doz = UNIT
+                bet_col = UNIT
+
+        if losses > 0:
+            bet_col = bet_col + UNIT
+            bet_doz = bet_doz + UNIT
+
+        # on lose session:
+        if game_utils.is_total_loss(bankroll_per_session, MAX_BET, bet_col, bet_doz).get('result'):
+            print(f'TOTAL LOSS on round {rounds}')
+            print('-- recording result for loss...')
+            results.update(
+                record_result_to_dict(game_id=gc, bankroll_start=bankroll, round_ended_at=rounds,
+                                      result_wl="l", amount=bankroll_per_session)
+            )
+            rounds = ROUNDS_MAX  # end session because of loss limit reach
+            continue
+
+        # on win session:
+        if (rounds == ROUNDS_MAX and bankroll_per_session >= 0) or bankroll_per_session >= stop_limit_by_amount:
+            print('-- recording result for win...')
+            results.update(
+                record_result_to_dict(game_id=gc, bankroll_start=bankroll, round_ended_at=rounds,
+                                      result_wl="w", amount=bankroll_per_session)
+            )
+            rounds = ROUNDS_MAX  # end session because of win limit reached
+
+        rounds = rounds + 1
+        print()
+    print('Results from strat_doz_col.py', results)
+    return results
+###########################################################################
+
+
+
+##### holy_grail_v1.py #####
+#
+import config
+import file_utils
+import game_utils
+from file_utils import record_result_to_dict
+
+reset_at_profit_of = 150  # Found state machine library.  In the meantime, continue with simple states
+bankroll_required = 2000  # buy in
+cashout = game_utils.calc_percentage(bankroll_required, 15)
+ORIG_UNIT_AMOUNT = 10
+MAX_BET = game_utils.set_max_bet(2000)  # Max bet for outsides is usually different from inside max bets
+
+# holy grail (advantage play)
+# bets on the 1st and 2nd dozen
+# lose: +1 unit
+# win: same unit on each bet
+# everytime reach 150, reset to single 10 unit
+
+
+def describe():
+    print('Not implemented.')
+
+
+def get_reset_levels(current_bankroll: int, old_reset_level_amount: int) -> int:
+    """
+    This function will determine the appropriate level to reset to.  Still undetermined if this will be needed, but
+    I have to clarify what if possible will happen if I surpass another level. ex.
+    reset @ 150 profit and starting from 2000
+    reached 2170. reset new level to 2300.  But what happens if somehow I get 2470 coming out of a losing streak? The
+    reset would have to be at 2450 (2150 - 2300 - 2450 -2600, etc...)
+    :return:
+    """
+    if current_bankroll < old_reset_level_amount:
+        return old_reset_level_amount
+
+    while current_bankroll > old_reset_level_amount:
+        old_reset_level_amount = old_reset_level_amount + reset_at_profit_of
+    return old_reset_level_amount
+
+
+def holy_grail_v1(games_count: int = None, bankroll: int = None):
+    gc = game_utils.readable_game_count(games_count)
+
+    # Calculate the stop limit by adding the winning amount and bankroll
+    stop_limit_by_amount = config.STOP_AFTER_WINNING_AMOUNT + bankroll  # +300
+    print('\n-------- New Game Started -------- : ', gc)
+    print('Will cashout @ ', cashout)
+    rounds = 0
+    bankroll_per_session = bankroll  # the running total bankroll
+    reset_at = bankroll + reset_at_profit_of
+    bets_locations = list()
+    units = 10
+    prev_reset_at_lvl = reset_at
+
+    nums_history = list()
+    results: dict = {}  # prepare new results
+
+    # strategy loop
+    while rounds < config.ROUNDS_MAX and bankroll_per_session <= stop_limit_by_amount:
+        # place bet; Some systems will require a specific trigger to place bets.  Keep this in mind!
+        bets_locations.append(game_utils.place_bet(units, config.DOZENS1_ID))
+        bets_locations.append(game_utils.place_bet(units, config.DOZENS2_ID))
+
+        total_bets = game_utils.bets_total(bets_locations)
+        bankroll_per_session = bankroll_per_session - total_bets
+        print(f'After bet({total_bets}), bankroll: {bankroll_per_session}')
+
+        # get number
+        num = game_utils.generate_number(0, 36)
+        nums_history.append(num)
+        print(f'Number: {num}')
+
+        # find winners/losers
+        for bet_data in bets_locations:
+            if game_utils.is_number_exist_in_location_by_id(num, bet_data.get('location')):
+                print('Win')
+                winnings = game_utils.calc_winnings(bet_data.get('bet'), config.DOZENS_MP)
+                print('+', winnings)
+                bankroll_per_session = bankroll_per_session + winnings
+                print(f'New bankroll(session): {bankroll_per_session}')
+                reset_at = get_reset_levels(bankroll_per_session, reset_at)
+                if reset_at == prev_reset_at_lvl:  # condition for reset to new level met. Set new level & reset units.
+                    prev_reset_at_lvl = reset_at
+                    units = ORIG_UNIT_AMOUNT
+                    print('New reset: ', reset_at)
+                print('Unit amount:', units)
+            else:
+                print('Lose')
+                units += ORIG_UNIT_AMOUNT  # on every loss increase a unit (per system)
+
+        game_utils.generate_win_loss_report(games_count, rounds, num, bets_locations)
+
+        # if total loss: record
+        if game_utils.is_total_loss(
+                bankroll_per_session, MAX_BET,
+                tuple(element['bet'] for element in bets_locations)).get('result'):
+            print('TOTAL LOSS')
+            print('-- recording result for loss...')
+            results.update(
+                record_result_to_dict(game_id=gc, bankroll_start=bankroll, round_ended_at=rounds,
+                                      result_wl="l", amount=bankroll_per_session)
+            )
+            rounds = config.ROUNDS_MAX  # end session because of loss limit reach
+
+        # if win cond1: reached limit in $ or reached stop limit by level: record
+        elif ((rounds >= config.ROUNDS_MAX and bankroll_per_session >= 0) or
+                bankroll_per_session >= stop_limit_by_amount):
+            print('-- recording result for win...')
+            results.update(
+                record_result_to_dict(game_id=gc, bankroll_start=bankroll, round_ended_at=rounds,
+                                      result_wl="w", amount=bankroll_per_session)
+            )
+            rounds = config.ROUNDS_MAX  # end session because of win limit reached
+            print('Exiting if condition for win')
+        else:
+            print('-- recording result for neither win or loss...')
+            results.update(
+                record_result_to_dict(game_id=gc, bankroll_start=bankroll, round_ended_at=rounds,
+                                      result_wl=config.LOSS if bankroll_per_session < bankroll else config.WIN,
+                                      amount=bankroll_per_session)
+            )
+            rounds += 1  # config.ROUNDS_MAX
+
+        bets_locations.clear()
+
+    print(f'Results from {file_utils.get_cur_filename()}:\n', results)
+    return results
+###########################################################################
+
+##### main.py #####
+#
+import file_utils
+import config
+from system_names import strat_holy_grail_v1
+
+system = strat_holy_grail_v1  # choose a system from system names to play out. Should be pulled from options.
+
+if __name__ == '__main__':
+    games_max = config.GAMES  # max games to simulate
+    games_count = 0
+    results = list()
+    IMMUTABLE_BANKROLL: int = 2000
+
+    if config.DESCRIBE_STRAT:
+        system.describe()
+
+    bankroll: int = IMMUTABLE_BANKROLL
+
+    while games_count < games_max:  # games loop !!! NOT the rounds per game!
+
+        # play a single (subject to change possibly) strategy and get its results
+        results.append(system.get('fn')(games_count=games_count, bankroll=bankroll))
+
+        # if previous iteration is >= 2000 (2###), start with (2####)
+        if config.start_with_last_bankroll and bankroll >= IMMUTABLE_BANKROLL:
+            print('Inspect', results)
+            bankroll = results[games_count].get('amount')
+            games_count = games_count + 1
+
+        # should always start new simulation with 'immutable' bankroll (ex. always start with 2000)
+        if not config.start_with_last_bankroll and bankroll >= IMMUTABLE_BANKROLL:
+            games_count = games_count + 1
+
+        # should not be allowed to continue -> defend against players risk of ruin
+        if bankroll < IMMUTABLE_BANKROLL:
+            games_count = games_max
+
+    print('After game completion, results: ', results)
+
+    for r in results:
+        print(r)
+
+    if config.save_to_csv:
+        file_utils.save_to_csv(results, system.get('name'))
+

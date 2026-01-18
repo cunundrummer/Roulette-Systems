@@ -1,10 +1,74 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
-</head>
-<body>
-$END$
-</body>
+<html>
+  <head>
+    <title>Parcel Sandbox</title>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="../html/css/styles.css">
+  </head>
+
+  <body>
+    <div id="app">
+        <fieldset>
+          <legend>Settings</legend>
+          <form action="" method="POST" class="">
+            <div>
+              <label for="strategy-select">Choose a strategy to simulate:</label>
+              <select name="strategies" id="strategy-select">
+                <option value="">--Please choose an option--</option>
+                <option value="strat1">strategy 1</option>
+                <option value="strat2">strategy 2</option>
+              </select>
+            </div>
+            <div>
+              <label for="starting-br">Starting bankroll</label>
+              <input name="startingBR" id="starting-br" type="number" value="2000" aria-valuemin="1">
+            </div>
+            <div>
+              <label for="start_w_last_br">Start with last bankroll? </label>
+              <input name="qStartWLastBR" id="start_w_last_br" type="checkbox">
+            </div>
+            <div>
+              <label for="cashout">Cashout @</label>
+              <input name="qCashout" id="cashout" type="number" value="15"
+                onload="this.style.width =
+                        (this.value.length + 1) = 'px';"
+                onkeypress="this.style.width =
+                        ((this.value.length + 2) * 8) + 'px';"
+              >
+              <h5>%</h5>
+            </div>
+            <div>
+              <label for="max_n_games">Attempt max </label>
+              <input name="maxGamesToSimulate" id="max_n_games" type="number" value="15">
+              games
+            </div>
+            <div>
+              <label for="max_n_rounds">Attempt max </label>
+              <input name="maxRounds" id="max_n_rounds" type="number" value="500">
+              rounds
+            </div>
+            <div>
+              <label for="save_csv">Save results to csv? </label>
+              <input name="qSaveCsv" id="save_csv" type="checkbox" checked>
+            </div>
+            <p>
+            <div>
+              <input type="submit" value="Set" />
+            </div>
+        </form>
+      </fieldset>
+      <fieldset>
+        <legend>Strategy description</legend>
+        <div>
+          <div>
+            Bankroll: <h6>get from config</h6>
+          </div>
+            <div>Maximum allowable bet: <h6>Get from config</h6></div>
+          <div>Insides: <h6>n/a</h6></div>
+          <div>Outsides: <h6>n/a</h6></div>
+        </div>
+      </fieldset>
+    </div>
+
+  </body>
 </html>
